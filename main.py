@@ -1,5 +1,6 @@
 import os
 from tkinter import *
+from tkinter import messagebox
 
 # init variables
 file = "passwords"
@@ -13,18 +14,36 @@ def save():
     email_username = fld_username.get()
     password = fld_password.get()
 
-    # set string / filename
-    global file
-    strline = f"{website}|{email_username}|{password}"
-    filename = file + ".txt"
+    # validate blanks
+    blanks = True
+    if len(website)==0 or len(email_username)==0 or len(password)==0:
+        blanks = True
+    else:
+        blanks = False
 
-    # write (append) file
-    with open(filename, "a") as f:
-        f.write(strline + "\n")
-        # clear fields
-        fld_password.delete(0,END)
-        fld_username.delete(0,END)
-        fld_website.delete(0,END)
+    if blanks is False:
+        # concat into one-liner string. concat filename+extension
+        global file
+        strline = f"{website}|{email_username}|{password}"
+        filename = file + ".txt"
+
+        # confirm
+        is_ok = messagebox.askokcancel(title="Confirmation", message=f"Ok to save? \n\n"
+                                                              f"Website: {website}\n"
+                                                              f"Email/Username: {email_username}\n"
+                                                              f"Password: {password}")
+
+        if is_ok:
+            # write (append) file
+            with open(filename, "a") as f:
+                f.write(strline + "\n")
+                # clear fields
+                fld_password.delete(0,END)
+                fld_username.delete(0,END)
+                fld_website.delete(0,END)
+                fld_username.insert(0, "@gmail.com")
+    else:
+        messagebox.showerror(message="Some fields are blank.")
 
 
 # ---------------------------- UI SETUP ------------------------------- #
@@ -64,7 +83,7 @@ bt_add.grid(column=1, row=4, columnspan=2)
 
 # widget tings
 fld_website.focus()
-fld_username.insert(0,"@.com")
+fld_username.insert(0,"@gmail.com")
 
 #
 window.mainloop()
