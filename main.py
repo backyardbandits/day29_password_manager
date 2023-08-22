@@ -1,11 +1,48 @@
 import os
 from tkinter import *
 from tkinter import messagebox
+import random
+import pyperclip
 
 # init variables
 file = "passwords"
+words = []
+digits = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+min_chars = 6
+min_digits = 3
 
 # ---------------------------- PASSWORD GENERATOR ------------------------------- #
+# read file containing top words
+with open('top_words.txt', 'r') as f:
+    # Read the content of the file
+    content = f.read()
+
+    # Split the content into words using spaces as separators
+    words = content.split()
+
+    # Convert all words to lowercase using a list comprehension
+    words_lower = [word.lower() for word in words]
+
+def gen_pass():
+    password = ""
+
+    # get words until min chars is reached
+    while len(password) < min_chars:
+        # get random word, capitalize first char
+        password += words[random.randint(0, len(words)-1 )].capitalize()
+
+    # get 3 digit num
+    for x in range(min_digits):
+        # get random digit, concat to str
+        password += str(digits[random.randint(0, len(digits)-1 )])
+
+    fld_password.delete(0, END)
+    fld_password.insert(0, password)
+    pyperclip.copy(password)
+
+    print(f"pass: {password}")
+
 
 # ---------------------------- SAVE PASSWORD ------------------------------- #
 def save():
@@ -66,7 +103,7 @@ lb_website = Label(text="Website:")
 lb_username = Label(text="Email/Username:")
 lb_password = Label(text="Password:")
 
-bt_genpass = Button(text="Gen Pass")
+bt_genpass = Button(text="Gen Pass", command=gen_pass)
 bt_add = Button(text="Add", width=34, command=save)
 
 # layout in grid
@@ -81,7 +118,7 @@ lb_password.grid(column=0, row=3)
 bt_genpass.grid(column=2, row=3)
 bt_add.grid(column=1, row=4, columnspan=2)
 
-# widget tings
+# widget default config
 fld_website.focus()
 fld_username.insert(0,"@gmail.com")
 
