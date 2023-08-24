@@ -1,14 +1,17 @@
 import os
 from tkinter import *
 from tkinter import messagebox
+from tkinter import ttk
 import random
 import pyperclip
+import json
 
 # init variables
 file = "passwords"
+file_ext = "json"
+filetypes = ["json","txt"]
 words = []
 digits = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-
 min_chars = 6
 min_digits = 3
 
@@ -45,6 +48,13 @@ def gen_pass():
 
 
 # ---------------------------- SAVE PASSWORD ------------------------------- #
+def clear_fields():
+    # clear fields
+    fld_password.delete(0, END)
+    fld_username.delete(0, END)
+    fld_website.delete(0, END)
+    fld_username.insert(0, "@gmail.com")
+
 def save():
     # get values
     website = fld_website.get()
@@ -52,35 +62,86 @@ def save():
     password = fld_password.get()
 
     # validate blanks
-    blanks = True
     if len(website)==0 or len(email_username)==0 or len(password)==0:
-        blanks = True
+        messagebox.showerror(message="Some fields are blank.")
     else:
-        blanks = False
-
-    if blanks is False:
-        # concat into one-liner string. concat filename+extension
+        # concat filename+extension
         global file
-        strline = f"{website}|{email_username}|{password}"
-        filename = file + ".txt"
+        filename = file + "." + file_ext
 
-        # confirm
-        is_ok = messagebox.askokcancel(title="Confirmation", message=f"Ok to save? \n\n"
-                                                              f"Website: {website}\n"
-                                                              f"Email/Username: {email_username}\n"
-                                                              f"Password: {password}")
+        # confirm save
+        is_ok = True
+        # is_ok = messagebox.askokcancel(title="Confirmation", message=f"Ok to save? \n\n"
+        #                                                       f"Website: {website}\n"
+        #                                                       f"Email/Username: {email_username}\n"
+        #                                                       f"Password: {password}")
 
         if is_ok:
-            # write (append) file
-            with open(filename, "a") as f:
-                f.write(strline + "\n")
-                # clear fields
-                fld_password.delete(0,END)
-                fld_username.delete(0,END)
-                fld_website.delete(0,END)
-                fld_username.insert(0, "@gmail.com")
-    else:
-        messagebox.showerror(message="Some fields are blank.")
+            if file_ext == "json":
+                # put values into a dict
+                new_data = {
+                    website :{
+                        "email_username": email_username,
+                        "password": password
+                    }
+                }
+
+                # WRITE JSON FILE
+                try:
+                    # read current data
+                    with open(filename, "r") as json_file:
+                        data = json.load(json_file)
+
+                except FileNotFoundError:
+                    print(f"File not found. Creating file: {filename}")
+                    # save new
+                    with open(filename, "w") as json_file:
+                        json.dump(new_data, json_file, indent=4)
+
+                else:
+                    # update old data with new data entry (append)
+                    data.update(new_data)
+
+                    # save updated
+                    with open(filename, "w") as json_file:
+                        json.dump(data, json_file, indent=4)
+
+                clear_fields()
+
+            else:
+                # write (append) file
+                strline = f"{website}|{email_username}|{password}"
+                with open(filename, "a") as f:
+                    f.write(strline + "\n")
+
+                clear_fields()
+
+# ---------------------------- SEARCH ------------------------------- #
+def search_pass():
+    filename = file + "." + file_ext
+    website = fld_website.get()
+    msg_prefix = "[SEARCH]"
+
+    try:
+        # read current data
+        with open(filename, "r") as json_file:
+            data = json.load(json_file)
+        data_entry = data[website]
+        password = data_entry["password"]
+
+        password_msg = f"{msg_prefix} Password searched: {password}"
+        print(password_msg)
+        # messagebox.showinfo(message=password_msg)
+
+    except KeyError:
+        msg = f"{msg_prefix} No entry found for website: {website}"
+        print(msg)
+        # messagebox.showinfo(message=msg)
+    except FileNotFoundError:
+        error_msg = f"{msg_prefix} Error reading file: {filename}"
+        print(error_msg)
+        # messagebox.showerror(error_msg)
+
 
 
 # ---------------------------- UI SETUP ------------------------------- #
@@ -94,29 +155,46 @@ canvas = Canvas (width=200, height=200, highlightthickness=0)
 canvas.create_image(100, 100, image=photo_logo)
 canvas.grid(column=1, row=0)
 
-# widgets
-fld_website = Entry(width=40)
+# set widgets
+# drop down filetype
+def on_filetypes_select(event):
+    global file_ext
+    selected_item = filetypes_var.get()
+    print(f"selected item: {selected_item}")
+    file_ext = selected_item
+
+filetypes_var = StringVar()
+drp_filetype = ttk.Combobox(window, textvariable=filetypes_var, values=filetypes, width=10)
+drp_filetype.set("json")
+drp_filetype.bind("<<ComboboxSelected>>", on_filetypes_select)  # Event handler
+
+fld_website = Entry(width=31)
 fld_username = Entry(width=40)
 fld_password = Entry(width=31)
 
+lb_filetype = Label(text="File Type:")
 lb_website = Label(text="Website:")
 lb_username = Label(text="Email/Username:")
 lb_password = Label(text="Password:")
 
+bt_search = Button(text="Search", command=search_pass)
 bt_genpass = Button(text="Gen Pass", command=gen_pass)
 bt_add = Button(text="Add", width=34, command=save)
 
 # layout in grid
-fld_website.grid(column=1, row=1, columnspan=2)
-fld_username.grid(column=1, row=2, columnspan=2)
-fld_password.grid(column=1, row=3)
+drp_filetype.grid(column=1, row=5, sticky="W")
+fld_website.grid(column=1, row=1, sticky="W")
+fld_username.grid(column=1, row=2, columnspan=2, sticky="W")
+fld_password.grid(column=1, row=3, sticky="W")
 
-lb_website.grid(column=0, row=1)
-lb_username.grid(column=0, row=2)
-lb_password.grid(column=0, row=3)
+lb_filetype.grid(column=0, row=5, sticky="W")
+lb_website.grid(column=0, row=1, sticky="W")
+lb_username.grid(column=0, row=2, sticky="W")
+lb_password.grid(column=0, row=3, sticky="W")
 
-bt_genpass.grid(column=2, row=3)
-bt_add.grid(column=1, row=4, columnspan=2)
+bt_search.grid(column=2, row=1, sticky="W")
+bt_genpass.grid(column=2, row=3, sticky="W")
+bt_add.grid(column=1, row=4, columnspan=2, sticky="W")
 
 # widget default config
 fld_website.focus()
